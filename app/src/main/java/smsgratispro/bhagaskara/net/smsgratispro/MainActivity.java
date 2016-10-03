@@ -17,6 +17,11 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.InterstitialAd;
 
+import com.mixpanel.android.mpmetrics.MixpanelAPI;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class MainActivity extends AppCompatActivity {
 
     String url = "";
@@ -25,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
     ProgressDialog progressDialog;
     String endpoint = "https://k5k34.azurewebsites.net/sms";
     private static final String TAG = "Main";
+    MixpanelAPI mixpanel;
 
     private void requestNewInterstitial() {
         AdRequest adRequest = new AdRequest.Builder().build();
@@ -36,11 +42,13 @@ public class MainActivity extends AppCompatActivity {
             try {
                 Uri uri = intent.getData();
                 Cursor cursor = this.getContentResolver().query(uri, null, null, null, null);
-                cursor.moveToFirst();
-                String string2 = cursor.getString(cursor.getColumnIndex("data1")).replaceAll("[^0-9]", "");
-                WebView webView = (WebView)this.findViewById(R.id.webView);
-                webView.loadUrl(this.endpoint + "/send?hp=" + string2);
-                cursor.close();
+                if (cursor != null) {
+                    cursor.moveToFirst();
+                    String string2 = cursor.getString(cursor.getColumnIndex("data1")).replaceAll("[^0-9]", "");
+                    WebView webView = (WebView)this.findViewById(R.id.webView);
+                    webView.loadUrl(this.endpoint + "/send?hp=" + string2);
+                    cursor.close();
+                }
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -68,6 +76,11 @@ public class MainActivity extends AppCompatActivity {
                 requestNewInterstitial();
             }
         });
+
+        String projectToken = "3aee00ecd3f5fdfaefa501b21ea655d9"; // e.g.: "1ef7e30d2a58d27f4b90c42e31d6d7ad"
+        mixpanel = MixpanelAPI.getInstance(this, projectToken);
+        mixpanel.track("Opened the app");
+
         requestNewInterstitial();
     }
 
@@ -104,15 +117,39 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public boolean shouldOverrideUrlLoading(WebView webView, String url){
             Log.i(TAG, "shouldOverrideUrlLoading URL: " + url);
+
             webView.loadUrl(url);
             mActivity.progressDialog = new ProgressDialog(mActivity);
             mActivity.progressDialog.setMessage("Loading");
             mActivity.progressDialog.show();
+            if(url.contains("Send")){
+                try {
+                    JSONObject props = new JSONObject();
+                    props.put("Source", "App");
+                    mixpanel.track("Send SMS Modal", props);
+                } catch (JSONException e) {
+                    Log.e("Main", "Unable to add properties to JSONObject", e);
+                }
+            }
             if(url.contains("Contact")){
+                try {
+                    JSONObject props = new JSONObject();
+                    props.put("Source", "App");
+                    mixpanel.track("Open Address Book", props);
+                } catch (JSONException e) {
+                    Log.e("Main", "Unable to add properties to JSONObject", e);
+                }
                 Intent intent = new Intent("android.intent.action.PICK", ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
                 this.mActivity.startActivityForResult(intent, this.mActivity.RESULT_CONTACT);
             }
             if(url.contains("Success") && this.mActivity.mInterstitialAd.isLoaded()){
+                try {
+                    JSONObject props = new JSONObject();
+                    props.put("Source", "App");
+                    mixpanel.track("Send SMS success", props);
+                } catch (JSONException e) {
+                    Log.e("Main", "Unable to add properties to JSONObject", e);
+                }
                 this.mActivity.mInterstitialAd.show();
             }
 
