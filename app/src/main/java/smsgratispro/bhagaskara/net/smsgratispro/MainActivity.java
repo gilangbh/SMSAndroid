@@ -79,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
 
         String projectToken = "3aee00ecd3f5fdfaefa501b21ea655d9"; // e.g.: "1ef7e30d2a58d27f4b90c42e31d6d7ad"
         mixpanel = MixpanelAPI.getInstance(this, projectToken);
-        mixpanel.track("Opened the app");
+
 
         requestNewInterstitial();
     }
